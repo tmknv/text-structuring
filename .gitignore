@@ -64,3 +64,8 @@ __pycache__/
 # Windows
 Thumbs.db
 ehthumbs.db
+
+# Ключи для OpenAI
+.env
+.env.local
+.env.*.local
