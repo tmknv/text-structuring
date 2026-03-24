@@ -1,10 +1,10 @@
 import os
 from dotenv import load_dotenv
 from openai import OpenAI
-from prompt import build_segment_prompt
-from prompt import build_structure_prompt
-from prompt import build_style_prompt
-from prompt import build_proofread_prompt
+from text_structuring.llm.prompt import build_segment_prompt
+from text_structuring.llm.prompt import build_structure_prompt
+from text_structuring.llm.prompt import build_style_prompt
+from text_structuring.llm.prompt import build_proofread_prompt
 
 # Ищем файл .env и загружаем переменные
 load_dotenv()
@@ -35,4 +35,3 @@ def LLMClient(text: str) -> str:
      ]
     )
     return completion.choices[0].message.content
-print('Check push')
