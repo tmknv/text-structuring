@@ -1,5 +1,5 @@
 # ========= SEGMENTER PROMPT =========
-
+# промпты так же разделить на user и system части. Перенести их в .yaml файл
 def build_segment_prompt(text: str) -> str:
     return f"""
 You are a text processing system.

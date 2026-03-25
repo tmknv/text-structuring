@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-
+# @dataclass, pedantic BaseModel. Чек че я писал саве и лехе
 class TextState:
     """
     Центральный объект состояния, который проходит через весь pipeline.

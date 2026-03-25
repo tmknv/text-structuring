@@ -12,6 +12,8 @@ load_dotenv()
 # Забираем ключ
 api_key = os.getenv("OPENROUTER_API_KEY")
 
+# зач LLMClient еще и в text-structuring/text_structuring/llm/checkllm.py
+# перенести в 1 место и импортировать 
 def LLMClient(text: str) -> str:
     """
     Обращение к LLM
