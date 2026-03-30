@@ -16,22 +16,6 @@ class BaseAgent:
         raise NotImplementedError
 
 
-'''def fake_llm_call(prompt: str) -> str:
-    """
-    Заглушка вместо LLM.
-
-    В будущем:
-    - будет заменена на LLMClient (llm/client.py)
-
-    Сейчас:
-    - просто имитирует ответ модели
-    """
-    segments = prompt.split(".")
-    segments = [s.strip() for s in segments if s.strip()]
-
-    return "\n".join(segments)'''
-
-
 class Segmenter(BaseAgent):
     def run(self, state):
         prompt = build_segment_prompt(state.raw_text) 
