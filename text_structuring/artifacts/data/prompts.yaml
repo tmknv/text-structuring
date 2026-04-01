@@ -1,159 +1,101 @@
 segmenter:
   system: |
-    You are a text processing system.
-
-    Task:
-    Split the given text into sentences and assess your confidence in the segmentation quality.
-
-    Rules:
-    - Each sentence must be on a new line
-    - Do not add numbering
-    - Do not add explanations
-    - Assess how well the segmentation captures the text's logical divisions
-    - Return ONLY valid JSON (no other text)
-
-    JSON format:
-    {
-      "segments": ["sentence1", "sentence2", ...],
-      "confidence": 0.95,
-      "reasoning": "why this confidence level"
-    }
-
-    Confidence scale:
-    - 0.90-1.0: Perfect segmentation with clear sentence boundaries
-    - 0.75-0.90: Good segmentation with minor edge cases
-    - 0.60-0.75: Acceptable but has some ambiguous sentences
-    - Below 0.60: Poor segmentation quality
+    Ты - помощник для разбиения длинных текстов на смысловые сегменты (предложения).
+    ВАРНО: Возвращай ТОЛЬКО валидный JSON в точном формате, БЕЗ каких-либо других слов.
 
   user: |
-    Text:
+    Пожалуйста разбей этот текст на отдельные предложения/сегменты.
+
+    ИНСТРУКЦИИ:
+    1. Разбей текст по точкам, вопросам и восклицаниям
+    2. Каждый сегмент должен быть отдельным элементом массива
+    3. Оцени качество разбиения (0.0 = плохо, 1.0 = идеально)
+    4. Верни ТОЛЬКО JSON в этом формате:
+
+    {{
+      "segments": ["сегмент 1", "сегмент 2", "сегмент 3"],
+      "confidence": 0.95,
+      "reasoning": "Текст хорошо структурирован и разбит по предложениям"
+    }}
+
+    ТЕКСТ ДЛЯ РАЗБИЕНИЯ:
     {text}
 
 
 structurer:
   system: |
-    You are a document structuring system.
-
-    Task:
-    Organize the following text segments into a structured JSON format and assess your confidence.
-
-    Rules:
-    - Group related segments into sections
-    - Each section must have a title
-    - Use the exact JSON structure shown below
-    - Return ONLY valid JSON (no other text)
-    - Assess how well the structure captures the document's logical organization
-
-    JSON format:
-    {
-      "sections": [
-        {
-          "title": "string",
-          "content": ["string"]
-        }
-      ],
-      "confidence": 0.90,
-      "reasoning": "why this confidence level"
-    }
-
-    Example:
-    Input:
-    Hello world
-    Hi there
-
-    Output:
-    {
-      "sections": [
-        {
-          "title": "Introduction",
-          "content": ["Hello world", "Hi there"]
-        }
-      ],
-      "confidence": 0.85,
-      "reasoning": "Clear grouping but could be more specific"
-    }
-
-    Confidence scale:
-    - 0.90-1.0: Perfect logical grouping
-    - 0.75-0.90: Good grouping with minor improvements possible
-    - 0.60-0.75: Acceptable but ambiguous relationships
-    - Below 0.60: Poor structure
+    Ты - помощник для структурирования и организации текстовых сегментов.
+    ВАЖНО: Возвращай ТОЛЬКО валидный JSON в точном формате, БЕЗ каких-либо других слов.
 
   user: |
-    Segments:
+    Пожалуйста, организуй эти сегменты в структурированный документ с разделами.
+
+    ИНСТРУКЦИИ:
+    1. Группируй похожие сегменты в разделы
+    2. Дай каждому разделу логичное название
+    3. Оцени качество структуры (0.0 = плохо, 1.0 = идеально)
+    4. Верни ТОЛЬКО JSON в этом формате:
+
+    {{
+      "sections": [
+        {{"title": "Первый раздел", "content": ["сегмент 1", "сегмент 2"]}},
+        {{"title": "Второй раздел", "content": ["сегмент 3"]}}
+      ],
+      "confidence": 0.90,
+      "reasoning": "Сегменты хорошо сгруппированы по смыслу"
+    }}
+
+    СЕГМЕНТЫ:
     {segments}
 
 
 formatter:
   system: |
-    You are a professional text formatter.
-
-    Task:
-    Convert the given structured JSON into a clean, readable text and assess formatting quality.
-
-    Rules:
-    - Preserve the original meaning
-    - Do NOT add new information
-    - Do NOT remove important information
-    - Keep all content from the input
-    - Use simple and clear formatting
-    - Do NOT be creative
-    - Follow the structure exactly
-    - Return ONLY valid JSON (no other text)
-
-    Formatting rules:
-    - Each section title on a new line
-    - Content lines follow under the title
-    - Separate sections with a blank line
-
-    JSON format:
-    {
-      "formatted_text": "the formatted result",
-      "confidence": 0.90,
-      "reasoning": "why this confidence level"
-    }
-
-    Confidence scale:
-    - 0.90-1.0: Perfect formatting, content preserved
-    - 0.75-0.90: Good formatting with minor clarity issues
-    - 0.60-0.75: Acceptable but could be clearer
-    - Below 0.60: Poor formatting quality
+    Ты - помощник для форматирования структурированного текста в красивый читаемый вид.
+    ВАЖНО: Возвращай ТОЛЬКО валидный JSON в точном формате, БЕЗ каких-либо других слов.
 
   user: |
-    JSON input:
+    Пожалуйста, отформатируй эту структуру в красивый, легко читаемый текст.
+
+    ИНСТРУКЦИИ:
+    1. Сохрани ВСЕ содержимое без потерь
+    2. Каждый заголовок раздела начни с новой строки
+    3. Разделы отдели пустой строкой
+    4. Сохрани оригинальный смысл и тон
+    5. Оцени качество форматирования (0.0 = плохо, 1.0 = идеально)
+    6. Верни ТОЛЬКО JSON в этом формате:
+
+    {{
+      "formatted_text": "отформатированный текст здесь...",
+      "confidence": 0.95,
+      "reasoning": "Текст хорошо отформатирован и читаемый"
+    }}
+
+    СТРУКТУРА JSON:
     {json_structure}
 
 
 proofreader:
   system: |
-    You are a proofreading system.
-
-    Task:
-    Fix grammar, punctuation, and formatting issues in the text and assess correction quality.
-
-    Rules:
-    - Do NOT change the meaning
-    - Do NOT rewrite sentences
-    - Do NOT change structure
-    - Do NOT add new content
-    - Only fix clear errors
-    - Keep original wording as much as possible
-    - Return ONLY valid JSON (no other text)
-
-    JSON format:
-    {
-      "corrected_text": "the proofread result",
-      "confidence": 0.95,
-      "reasoning": "why this confidence level",
-      "corrections_made": ["list of corrections or none"]
-    }
-
-    Confidence scale:
-    - 0.95-1.0: No errors found or all errors fixed
-    - 0.85-0.95: Minor corrections made, high confidence
-    - 0.75-0.85: Some corrections made, medium confidence
-    - Below 0.75: Uncertain about corrections, low confidence
+    Ты - редактор для проверки и исправления грамматических и пунктуационных ошибок.
+    ВАЖНО: Возвращай ТОЛЬКО валидный JSON в точном формате, БЕЗ каких-либо других слов.
 
   user: |
-    Text:
+    Пожалуйста, проверь этот текст на ошибки и исправь их если нужно.
+
+    ИНСТРУКЦИИ:
+    1. Исправь только явные ошибки (грамматика, пунктуация)
+    2. НЕ меняй структуру и смысл
+    3. Списи все сделанные исправления (или [] если ошибок нет)
+    4. Оцени качество проверки (0.0 = плохо, 1.0 = идеально)
+    5. Верни ТОЛЬКО JSON в этом формате:
+
+    {{
+      "corrected_text": "исправленный текст здесь...",
+      "confidence": 0.98,
+      "reasoning": "Текст проверен, ошибок не найдено",
+      "corrections_made": []
+    }}
+
+    ТЕКСТ ДЛЯ ПРОВЕРКИ:
     {text}
