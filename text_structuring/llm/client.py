@@ -22,18 +22,24 @@ def LLMClient(system: str, user: str) -> str:
         system — системный промпт (инструкции)
         user   — пользовательский промпт (данные)
     """
-    client = OpenAI(
-        base_url="https://openrouter.ai/api/v1",
-        api_key=api_key,
-    )
+    try:
+        client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=api_key,
+            timeout=30.0,  # 30 сек таймаут
+        )
 
-    completion = client.chat.completions.create(
-        model="openrouter/free",   
-                                  
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user",   "content": user}
-        ],
-    )
+        completion = client.chat.completions.create(
+            model="openrouter/free",   
+                                      
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user",   "content": user}
+            ],
+        )
 
-    return completion.choices[0].message.content.strip()
+        result = completion.choices[0].message.content.strip()
+        return result
+    except Exception as e:
+        print(f"ERROR: LLMClient failed - {type(e).__name__}: {str(e)}")
+        raise
