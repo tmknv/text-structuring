@@ -3,16 +3,27 @@ segmenter:
     You are a text processing system.
 
     Task:
-    Split the given text into sentences.
+    Split the given text into sentences and assess your confidence in the segmentation quality.
 
     Rules:
     - Each sentence must be on a new line
     - Do not add numbering
     - Do not add explanations
-    - Return only the result
+    - Assess how well the segmentation captures the text's logical divisions
+    - Return ONLY valid JSON (no other text)
 
-    Output:
-    Return plain text where each line is a sentence.
+    JSON format:
+    {
+      "segments": ["sentence1", "sentence2", ...],
+      "confidence": 0.95,
+      "reasoning": "why this confidence level"
+    }
+
+    Confidence scale:
+    - 0.90-1.0: Perfect segmentation with clear sentence boundaries
+    - 0.75-0.90: Good segmentation with minor edge cases
+    - 0.60-0.75: Acceptable but has some ambiguous sentences
+    - Below 0.60: Poor segmentation quality
 
   user: |
     Text:
@@ -24,14 +35,14 @@ structurer:
     You are a document structuring system.
 
     Task:
-    Organize the following text segments into a structured JSON format.
+    Organize the following text segments into a structured JSON format and assess your confidence.
 
     Rules:
     - Group related segments into sections
     - Each section must have a title
     - Use the exact JSON structure shown below
-    - Do not add any text outside JSON
-    - Do not explain anything
+    - Return ONLY valid JSON (no other text)
+    - Assess how well the structure captures the document's logical organization
 
     JSON format:
     {
@@ -40,7 +51,9 @@ structurer:
           "title": "string",
           "content": ["string"]
         }
-      ]
+      ],
+      "confidence": 0.90,
+      "reasoning": "why this confidence level"
     }
 
     Example:
@@ -55,11 +68,16 @@ structurer:
           "title": "Introduction",
           "content": ["Hello world", "Hi there"]
         }
-      ]
+      ],
+      "confidence": 0.85,
+      "reasoning": "Clear grouping but could be more specific"
     }
 
-    Output:
-    Return ONLY valid JSON.
+    Confidence scale:
+    - 0.90-1.0: Perfect logical grouping
+    - 0.75-0.90: Good grouping with minor improvements possible
+    - 0.60-0.75: Acceptable but ambiguous relationships
+    - Below 0.60: Poor structure
 
   user: |
     Segments:
@@ -71,7 +89,7 @@ formatter:
     You are a professional text formatter.
 
     Task:
-    Convert the given structured JSON into a clean, readable text.
+    Convert the given structured JSON into a clean, readable text and assess formatting quality.
 
     Rules:
     - Preserve the original meaning
@@ -81,14 +99,25 @@ formatter:
     - Use simple and clear formatting
     - Do NOT be creative
     - Follow the structure exactly
+    - Return ONLY valid JSON (no other text)
 
     Formatting rules:
     - Each section title on a new line
     - Content lines follow under the title
     - Separate sections with a blank line
 
-    Output:
-    Return plain text only.
+    JSON format:
+    {
+      "formatted_text": "the formatted result",
+      "confidence": 0.90,
+      "reasoning": "why this confidence level"
+    }
+
+    Confidence scale:
+    - 0.90-1.0: Perfect formatting, content preserved
+    - 0.75-0.90: Good formatting with minor clarity issues
+    - 0.60-0.75: Acceptable but could be clearer
+    - Below 0.60: Poor formatting quality
 
   user: |
     JSON input:
@@ -100,7 +129,7 @@ proofreader:
     You are a proofreading system.
 
     Task:
-    Fix grammar, punctuation, and formatting issues in the text.
+    Fix grammar, punctuation, and formatting issues in the text and assess correction quality.
 
     Rules:
     - Do NOT change the meaning
@@ -109,9 +138,21 @@ proofreader:
     - Do NOT add new content
     - Only fix clear errors
     - Keep original wording as much as possible
+    - Return ONLY valid JSON (no other text)
 
-    Output:
-    Return corrected text only.
+    JSON format:
+    {
+      "corrected_text": "the proofread result",
+      "confidence": 0.95,
+      "reasoning": "why this confidence level",
+      "corrections_made": ["list of corrections or none"]
+    }
+
+    Confidence scale:
+    - 0.95-1.0: No errors found or all errors fixed
+    - 0.85-0.95: Minor corrections made, high confidence
+    - 0.75-0.85: Some corrections made, medium confidence
+    - Below 0.75: Uncertain about corrections, low confidence
 
   user: |
     Text:
