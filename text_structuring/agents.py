@@ -1,12 +1,14 @@
 
 from text_structuring.llm.prompt import build_segment_prompt, build_structure_prompt, build_style_prompt, build_proofread_prompt
 from text_structuring.llm.client import LLMClient
+from text_structuring.contracts import AgentResponse, Vote, create_success_response, create_failed_response
 import json
 import yaml
 import os
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 from dotenv import load_dotenv
+import time
 # ====================== Prompt Manager ======================
 
 class PromptManager:
@@ -52,56 +54,251 @@ class BaseAgent:
     """
     Базовый класс для всех агентов.
 
-    Контракт:
-    - принимает state
-    - возвращает state
+    Новый контракт (структурированный):
+    - принимает state (исходные данные)
+    - возвращает AgentResponse (структурированный ответ с Vote, confidence, reasons и т.д.)
+    
+    Все наследники должны переопределить метод run() и возвращать AgentResponse.
     """
 
-    def run(self, state):
+    def run(self, state) -> AgentResponse:
+        """
+        Выполнить обработку и вернуть AgentResponse.
+        
+        Args:
+            state: Состояние текста в pipeline
+            
+        Returns:
+            AgentResponse - структурированный ответ с результатом работы
+        """
         raise NotImplementedError
 
 
 class Segmenter(BaseAgent):
-    def run(self, state):
-        pm = PromptManager()
-        prompt = pm.get("segmenter", text=state.raw_text)
-        
-        response = LLMClient(prompt["system"], prompt["user"])  
-        
-        state.segments = [s.strip() for s in response.split("\n") if s.strip()]
-        return state
+    """Агент для сегментации текста на части"""
+    
+    def run(self, state) -> AgentResponse:
+        try:
+            start_time = time.time()
+            pm = PromptManager()
+            prompt = pm.get("segmenter", text=state.raw_text)
+            
+            response_text = LLMClient(prompt["system"], prompt["user"])
+            response_data = json.loads(response_text)
+            
+            segments = response_data.get("segments", [])
+            confidence = response_data.get("confidence", 0.9)
+            reasoning = response_data.get("reasoning", "")
+            
+            latency = (time.time() - start_time) * 1000
+            
+            state.segments = segments
+            
+            return create_success_response(
+                agent_name="Segmenter",
+                data={"segments": segments, "count": len(segments)},
+                confidence=confidence,  # Получено от LLM
+                reasons=[
+                    f"Успешно выделено {len(segments)} сегментов текста",
+                    f"Рассуждение LLM: {reasoning}" if reasoning else ""
+                ],
+                quality_metrics={
+                    "segment_count": len(segments),
+                    "avg_segment_length": sum(len(s) for s in segments) / len(segments) if segments else 0,
+                    "llm_confidence": confidence
+                },
+                latency_ms=latency
+            )
+        except json.JSONDecodeError as e:
+            return create_failed_response(
+                agent_name="Segmenter",
+                error=f"JSON парсинг ошибка: {str(e)}",
+                reason="Ошибка при парсинге JSON от LLM",
+                latency_ms=(time.time() - start_time) * 1000 if 'start_time' in locals() else None
+            )
+        except Exception as e:
+            return create_failed_response(
+                agent_name="Segmenter",
+                error=str(e),
+                reason="Ошибка при сегментации текста",
+                latency_ms=(time.time() - start_time) * 1000 if 'start_time' in locals() else None
+            )
 
 
 class StructureBuilder(BaseAgent):
-    def run(self, state):
-        pm = PromptManager()
-        joined = "\n".join(state.segments)
-        prompt = pm.get("structurer", segments=joined)
-        
-        response = LLMClient(prompt["system"], prompt["user"])  
-        
-        state.structure = json.loads(response)
-        return state
+    """Агент для построения структуры из сегментов"""
+    
+    def run(self, state) -> AgentResponse:
+        try:
+            start_time = time.time()
+            pm = PromptManager()
+            joined = "\n".join(state.segments)
+            prompt = pm.get("structurer", segments=joined)
+            
+            response_text = LLMClient(prompt["system"], prompt["user"])
+            response_data = json.loads(response_text)
+            
+            structure = response_data.get("sections", [])
+            confidence = response_data.get("confidence", 0.85)
+            reasoning = response_data.get("reasoning", "")
+            
+            latency = (time.time() - start_time) * 1000
+            
+            state.structure = {"sections": structure} if isinstance(structure, list) else response_data
+            
+            # Анализ качества структуры
+            depth = _calculate_json_depth(state.structure)
+            
+            return create_success_response(
+                agent_name="StructureBuilder",
+                data={"structure": state.structure},
+                confidence=confidence,  # Получено от LLM
+                reasons=[
+                    "Структура успешно построена из сегментов",
+                    f"Глубина иерархии: {depth}",
+                    f"Рассуждение LLM: {reasoning}" if reasoning else ""
+                ],
+                quality_metrics={
+                    "structure_depth": depth,
+                    "segments_involved": len(state.segments),
+                    "llm_confidence": confidence
+                },
+                latency_ms=latency
+            )
+        except json.JSONDecodeError as e:
+            return create_failed_response(
+                agent_name="StructureBuilder",
+                error=f"JSON парсинг ошибка: {str(e)}",
+                reason="Невалидный JSON в ответе",
+                latency_ms=(time.time() - start_time) * 1000 if 'start_time' in locals() else None
+            )
+        except Exception as e:
+            return create_failed_response(
+                agent_name="StructureBuilder",
+                error=str(e),
+                reason="Ошибка при построении структуры",
+                latency_ms=(time.time() - start_time) * 1000 if 'start_time' in locals() else None
+            )
 
 
 class Styler(BaseAgent):
-    def run(self, state):
-        pm = PromptManager()
-        json_structure = json.dumps(state.structure, ensure_ascii=False, indent=2)
-        prompt = pm.get("formatter", json_structure=json_structure)
-        
-        response = LLMClient(prompt["system"], prompt["user"])  
-        
-        state.styled_text = response
-        return state
+    """Агент для стилизации и форматирования структурированного текста"""
+    
+    def run(self, state) -> AgentResponse:
+        try:
+            start_time = time.time()
+            pm = PromptManager()
+            json_structure = json.dumps(state.structure, ensure_ascii=False, indent=2)
+            prompt = pm.get("formatter", json_structure=json_structure)
+            
+            response_text = LLMClient(prompt["system"], prompt["user"])
+            response_data = json.loads(response_text)
+            
+            styled_text = response_data.get("formatted_text", "")
+            confidence = response_data.get("confidence", 0.85)
+            reasoning = response_data.get("reasoning", "")
+            
+            latency = (time.time() - start_time) * 1000
+            
+            state.styled_text = styled_text
+            
+            return create_success_response(
+                agent_name="Styler",
+                data={"styled_text": styled_text, "length": len(styled_text)},
+                confidence=confidence,  # Получено от LLM
+                reasons=[
+                    "Текст успешно отформатирован и стилизован",
+                    f"Итоговый размер: {len(styled_text)} символов",
+                    f"Рассуждение LLM: {reasoning}" if reasoning else ""
+                ],
+                quality_metrics={
+                    "output_length": len(styled_text),
+                    "formatting_ratio": len(styled_text) / (len(json_structure) + 1),
+                    "llm_confidence": confidence
+                },
+                latency_ms=latency
+            )
+        except json.JSONDecodeError as e:
+            return create_failed_response(
+                agent_name="Styler",
+                error=f"JSON парсинг ошибка: {str(e)}",
+                reason="Ошибка при парсинге JSON от LLM",
+                latency_ms=(time.time() - start_time) * 1000 if 'start_time' in locals() else None
+            )
+        except Exception as e:
+            return create_failed_response(
+                agent_name="Styler",
+                error=str(e),
+                reason="Ошибка при стилизации текста",
+                latency_ms=(time.time() - start_time) * 1000 if 'start_time' in locals() else None
+            )
 
 
 class Proofreader(BaseAgent):
-    def run(self, state):
-        pm = PromptManager()
-        prompt = pm.get("proofreader", text=state.styled_text)
-        
-        response = LLMClient(prompt["system"], prompt["user"])   
-        
-        state.final_text = response
-        return state
+    """Агент для проверки качества и финализации текста"""
+    
+    def run(self, state) -> AgentResponse:
+        try:
+            start_time = time.time()
+            pm = PromptManager()
+            prompt = pm.get("proofreader", text=state.styled_text)
+            
+            response_text = LLMClient(prompt["system"], prompt["user"])
+            response_data = json.loads(response_text)
+            
+            final_text = response_data.get("corrected_text", "")
+            confidence = response_data.get("confidence", 0.90)
+            corrections = response_data.get("corrections_made", [])
+            reasoning = response_data.get("reasoning", "")
+            
+            latency = (time.time() - start_time) * 1000
+            
+            state.final_text = final_text
+            
+            return create_success_response(
+                agent_name="Proofreader",
+                data={"final_text": final_text, "length": len(final_text)},
+                confidence=confidence,  # Получено от LLM
+                reasons=[
+                    "Текст успешно проверен и финализирован",
+                    f"Исправлений: {len(corrections) if isinstance(corrections, list) else 0}",
+                    f"Рассуждение LLM: {reasoning}" if reasoning else ""
+                ],
+                quality_metrics={
+                    "final_length": len(final_text),
+                    "correction_ratio": abs(len(state.styled_text) - len(final_text)) / (len(state.styled_text) + 1) if state.styled_text else 0,
+                    "corrections_count": len(corrections) if isinstance(corrections, list) else 0,
+                    "llm_confidence": confidence
+                },
+                latency_ms=latency
+            )
+        except json.JSONDecodeError as e:
+            return create_failed_response(
+                agent_name="Proofreader",
+                error=f"JSON парсинг ошибка: {str(e)}",
+                reason="Ошибка при парсинге JSON от LLM",
+                latency_ms=(time.time() - start_time) * 1000 if 'start_time' in locals() else None
+            )
+        except Exception as e:
+            return create_failed_response(
+                agent_name="Proofreader",
+                error=str(e),
+                reason="Ошибка при проверке и финализации",
+                latency_ms=(time.time() - start_time) * 1000 if 'start_time' in locals() else None
+            )
+
+
+# ====================== Вспомогательные функции ======================
+
+def _calculate_json_depth(obj, current_depth=0) -> int:
+    """Вычислить глубину JSON структуры"""
+    if isinstance(obj, dict):
+        if not obj:
+            return current_depth
+        return max(_calculate_json_depth(v, current_depth + 1) for v in obj.values())
+    elif isinstance(obj, (list, tuple)):
+        if not obj:
+            return current_depth
+        return max(_calculate_json_depth(item, current_depth + 1) for item in obj)
+    else:
+        return current_depth
