@@ -32,8 +32,6 @@ class PromptManager:
         with open(filepath, encoding="utf-8") as f:
             self._prompts = yaml.safe_load(f)
 
-        print(f"Промпты успешно загружены из: {filepath}")
-
     def get(self, prompt_name: str, **kwargs) -> Dict[str, str]:
         """Возвращает system и user промпты"""
         if self._prompts is None:
@@ -91,13 +89,12 @@ class Segmenter(BaseAgent):
             reasoning = response_data.get("reasoning", "")
             
             latency = (time.time() - start_time) * 1000
-            
             state.segments = segments
             
             return create_success_response(
                 agent_name="Segmenter",
                 data={"segments": segments, "count": len(segments)},
-                confidence=confidence,  # Получено от LLM
+                confidence=confidence,
                 reasons=[
                     f"Успешно выделено {len(segments)} сегментов текста",
                     f"Рассуждение LLM: {reasoning}" if reasoning else ""
@@ -113,7 +110,7 @@ class Segmenter(BaseAgent):
             return create_failed_response(
                 agent_name="Segmenter",
                 error=f"JSON парсинг ошибка: {str(e)}",
-                reason="Ошибка при парсинге JSON от LLM",
+                reason="Невалидный JSON в ответе LLM",
                 latency_ms=(time.time() - start_time) * 1000 if 'start_time' in locals() else None
             )
         except Exception as e:
@@ -205,7 +202,7 @@ class Styler(BaseAgent):
             return create_success_response(
                 agent_name="Styler",
                 data={"styled_text": styled_text, "length": len(styled_text)},
-                confidence=confidence,  # Получено от LLM
+                confidence=confidence,
                 reasons=[
                     "Текст успешно отформатирован и стилизован",
                     f"Итоговый размер: {len(styled_text)} символов",
