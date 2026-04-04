@@ -1,9 +1,9 @@
 """LangGraph Pipeline для структурирования текста"""
 
 from langgraph.graph import StateGraph, START, END
-from typing import TypedDict, Optional, List
-from text_structuring.agents import Segmenter, StructureBuilder, Styler, Proofreader
-from text_structuring.contracts import AgentResponse
+from typing import TypedDict, Optional
+from text_structuring.main_ag.agents import Segmenter, StructureBuilder, Styler, Proofreader
+from text_structuring.schemas.contracts import AgentResponse
 from text_structuring.schemas.text import TextState
 
 

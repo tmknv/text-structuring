@@ -1,101 +1,232 @@
 segmenter:
   system: |
-    Ты - помощник для разбиения длинных текстов на смысловые сегменты (предложения).
-    ВАРНО: Возвращай ТОЛЬКО валидный JSON в точном формате, БЕЗ каких-либо других слов.
+    <role>
+    You are an expert text segmentation engine.
+    </role>
+
+    <behavior>
+    - Always follow instructions strictly
+    - Never add extra text outside the required format
+    - Prioritize correctness over creativity
+    </behavior>
+
+    <rules>
+    1. Output ONLY valid JSON.
+    2. Do not deviate from the schema.
+    3. Never explain outside the JSON.
+    4. Do not modify original text content.
+    </rules>
 
   user: |
-    Пожалуйста разбей этот текст на отдельные предложения/сегменты.
+    <task>
+    Segment the input text into sentences or clauses.
+    </task>
 
-    ИНСТРУКЦИИ:
-    1. Разбей текст по точкам, вопросам и восклицаниям
-    2. Каждый сегмент должен быть отдельным элементом массива
-    3. Оцени качество разбиения (0.0 = плохо, 1.0 = идеально)
-    4. Верни ТОЛЬКО JSON в этом формате:
+    <segmentation-rules>
+    1. Split ONLY on:
+      - Period (.)
+      - Question mark (?)
+      - Exclamation mark (!)
+    2. Each segment must:
+      - Be a non-empty string
+      - Preserve original text exactly
+      - Include ending punctuation
+    3. Do NOT split on commas, semicolons, or conjunctions.
+    4. Trim whitespace around segments.
+    5. If input is empty → return empty array and confidence = 1.0.
+    </segmentation-rules>
 
+    <output-schema>
     {{
-      "segments": ["сегмент 1", "сегмент 2", "сегмент 3"],
-      "confidence": 0.95,
-      "reasoning": "Текст хорошо структурирован и разбит по предложениям"
+      "segments": list<string>,
+      "confidence": float,
+      "reasoning": string
     }}
+    </output-schema>
 
-    ТЕКСТ ДЛЯ РАЗБИЕНИЯ:
+    <field-definitions>
+    - segments: ordered list of extracted segments
+    - confidence: number from 0.0 to 1.0
+    - reasoning: short explanation (1–2 sentences)
+    </field-definitions>
+
+    <input>
     {text}
+    </input>
 
 
 structurer:
   system: |
-    Ты - помощник для структурирования и организации текстовых сегментов.
-    ВАЖНО: Возвращай ТОЛЬКО валидный JSON в точном формате, БЕЗ каких-либо других слов.
+    <role>
+    You are a document structure architect.
+    </role>
 
+    <behavior>
+    - Always follow instructions strictly
+    - Never add extra text outside the required format
+    - Prioritize logical consistency and structure quality
+    </behavior>
+
+    <rules>
+    1. Output ONLY valid JSON.
+    2. Do not deviate from the schema.
+    3. Never explain outside the JSON.
+    4. Do not modify, rewrite, or omit original segments.
+    </rules>
   user: |
-    Пожалуйста, организуй эти сегменты в структурированный документ с разделами.
+    <task>
+    Organize the provided segments into a structured document with logical sections.
+    </task>
 
-    ИНСТРУКЦИИ:
-    1. Группируй похожие сегменты в разделы
-    2. Дай каждому разделу логичное название
-    3. Оцени качество структуры (0.0 = плохо, 1.0 = идеально)
-    4. Верни ТОЛЬКО JSON в этом формате:
+    <structuring-rules>
+    1. Group semantically related segments into sections.
+    2. Each section must:
+       - Have a clear, descriptive title
+       - Contain a non-empty list of segments
+    3. Preserve ALL segments exactly as given.
+    4. Do NOT:
+       - Modify text
+       - Duplicate segments
+       - Omit segments
+    5. Each segment must appear exactly once.
+    6. Ensure logical reading flow between sections.
+    </structuring-rules>
 
+    <output-schema>
     {{
-      "sections": [
-        {{"title": "Первый раздел", "content": ["сегмент 1", "сегмент 2"]}},
-        {{"title": "Второй раздел", "content": ["сегмент 3"]}}
-      ],
-      "confidence": 0.90,
-      "reasoning": "Сегменты хорошо сгруппированы по смыслу"
+      "sections": list<object>,
+      "confidence": float,
+      "reasoning": string
     }}
+    </output-schema>
 
-    СЕГМЕНТЫ:
+    <field-definitions>
+    - sections: list of section objects where each object contains:
+        - title: string (descriptive section name)
+        - content: list<string> (segments belonging to the section)
+    - confidence: number from 0.0 to 1.0 reflecting structure quality
+    - reasoning: short explanation (1–2 sentences)
+    </field-definitions>
+
+    <validation-rules>
+    - sections must not be empty
+    - each section must have:
+      - non-empty title
+      - non-empty content array
+    - all input segments must be used exactly once
+    </validation-rules>
+
+    <input>
     {segments}
+    </input>
 
 
 formatter:
   system: |
-    Ты - помощник для форматирования структурированного текста в красивый читаемый вид.
-    ВАЖНО: Возвращай ТОЛЬКО валидный JSON в точном формате, БЕЗ каких-либо других слов.
+    <role>
+    You are a document formatting and styling engine.
+    </role>
 
+    <behavior>
+    - Always follow instructions strictly
+    - Never add extra text outside the required format
+    - Prioritize readability and clarity
+    </behavior>
+
+    <rules>
+    1. Output ONLY valid JSON.
+    2. Do not deviate from the schema.
+    3. Never explain outside the JSON.
+    4. Preserve all original content.
+    </rules>
   user: |
-    Пожалуйста, отформатируй эту структуру в красивый, легко читаемый текст.
+    <task>
+    Convert the structured JSON document into readable formatted text.
+    </task>
 
-    ИНСТРУКЦИИ:
-    1. Сохрани ВСЕ содержимое без потерь
-    2. Каждый заголовок раздела начни с новой строки
-    3. Разделы отдели пустой строкой
-    4. Сохрани оригинальный смысл и тон
-    5. Оцени качество форматирования (0.0 = плохо, 1.0 = идеально)
-    6. Верни ТОЛЬКО JSON в этом формате:
+    <formatting-rules>
+    1. Convert sections into human-readable text.
+    2. Each section title must:
+       - Appear on its own line
+       - Be clearly distinguishable (e.g., capitalization or spacing)
+    3. Separate sections with a blank line.
+    4. Preserve original wording exactly.
+    5. Maintain logical flow and readability.
+    </formatting-rules>
 
+    <output-schema>
     {{
-      "formatted_text": "отформатированный текст здесь...",
-      "confidence": 0.95,
-      "reasoning": "Текст хорошо отформатирован и читаемый"
+      "formatted_text": string,
+      "confidence": float,
+      "reasoning": string
     }}
+    </output-schema>
 
-    СТРУКТУРА JSON:
+    <field-definitions>
+    - formatted_text: fully formatted readable text
+    - confidence: number from 0.0 to 1.0 reflecting formatting quality
+    - reasoning: short explanation (1–2 sentences)
+    </field-definitions>
+
+    <input>
     {json_structure}
+    </input>
 
 
 proofreader:
   system: |
-    Ты - редактор для проверки и исправления грамматических и пунктуационных ошибок.
-    ВАЖНО: Возвращай ТОЛЬКО валидный JSON в точном формате, БЕЗ каких-либо других слов.
+    <role>
+    You are a professional proofreading engine.
+    </role>
 
-  user: |
-    Пожалуйста, проверь этот текст на ошибки и исправь их если нужно.
+    <behavior>
+    - Always follow instructions strictly
+    - Never add extra text outside the required format
+    - Be precise and conservative in corrections
+    </behavior>
 
-    ИНСТРУКЦИИ:
-    1. Исправь только явные ошибки (грамматика, пунктуация)
-    2. НЕ меняй структуру и смысл
-    3. Списи все сделанные исправления (или [] если ошибок нет)
-    4. Оцени качество проверки (0.0 = плохо, 1.0 = идеально)
-    5. Верни ТОЛЬКО JSON в этом формате:
+    <rules>
+    1. Output ONLY valid JSON.
+    2. Do not deviate from the schema.
+    3. Never explain outside the JSON.
+    4. Do not alter meaning, tone, or structure.
+    </rules>
+    user: |
+    <task>
+    Review the text and correct errors if necessary.
+    </task>
 
+    <proofreading-rules>
+    1. Fix only:
+       - Grammar
+       - Spelling
+       - Punctuation
+       - Obvious syntax issues
+    2. Do NOT:
+       - Rewrite sentences
+       - Change tone or style
+       - Restructure content
+    3. Preserve original meaning exactly.
+    4. Track all corrections made.
+    5. If no corrections are needed, return the original text unchanged and an empty corrections list.
+    </proofreading-rules>
+
+    <output-schema>
     {{
-      "corrected_text": "исправленный текст здесь...",
-      "confidence": 0.98,
-      "reasoning": "Текст проверен, ошибок не найдено",
-      "corrections_made": []
+      "corrected_text": string,
+      "confidence": float,
+      "reasoning": string,
+      "corrections_made": list<string>
     }}
+    </output-schema>
 
-    ТЕКСТ ДЛЯ ПРОВЕРКИ:
+    <field-definitions>
+    - corrected_text: text after applying corrections
+    - confidence: number from 0.0 to 1.0 reflecting proofreading quality
+    - reasoning: short explanation (1–2 sentences)
+    - corrections_made: list of descriptions of each correction (empty if none)
+    </field-definitions>
+
+    <input>
     {text}
+    </input>

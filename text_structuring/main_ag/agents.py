@@ -1,12 +1,11 @@
 
-from text_structuring.llm.prompt import build_segment_prompt, build_structure_prompt, build_style_prompt, build_proofread_prompt
 from text_structuring.llm.client import LLMClient
-from text_structuring.contracts import AgentResponse, Vote, create_success_response, create_failed_response
+from text_structuring.schemas.contracts import AgentResponse, create_success_response, create_failed_response
 import json
 import yaml
 import os
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict
 from dotenv import load_dotenv
 import time
 # ====================== Prompt Manager ======================
@@ -80,12 +79,13 @@ class Segmenter(BaseAgent):
             start_time = time.time()
             pm = PromptManager()
             prompt = pm.get("segmenter", text=state.raw_text)
-            
+            print(f"[DEBUG Segmenter] prompt: {prompt}")
             response_text = LLMClient(prompt["system"], prompt["user"])
             response_data = json.loads(response_text)
-            
+            print(f"[DEBUG Segmenter] LLM response text: {response_text}")
+            print(f"[DEBUG Segmenter] LLM response data: {response_data}")
             segments = response_data.get("segments", [])
-            confidence = response_data.get("confidence", 0.9)
+            confidence = response_data.get("confidence", 0.00)
             reasoning = response_data.get("reasoning", "")
             
             latency = (time.time() - start_time) * 1000
@@ -133,10 +133,13 @@ class StructureBuilder(BaseAgent):
             prompt = pm.get("structurer", segments=joined)
             
             response_text = LLMClient(prompt["system"], prompt["user"])
+
+            print(f"[DEBUG StructureBuilder] prompt: {prompt}")
             response_data = json.loads(response_text)
-            
+            print(f"[DEBUG StructureBuilder] LLM response text: {response_text}")
+            print(f"[DEBUG StructureBuilder] LLM response data: {response_data}")
             structure = response_data.get("sections", [])
-            confidence = response_data.get("confidence", 0.85)
+            confidence = response_data.get("confidence", 0.00)
             reasoning = response_data.get("reasoning", "")
             
             latency = (time.time() - start_time) * 1000
@@ -189,10 +192,13 @@ class Styler(BaseAgent):
             prompt = pm.get("formatter", json_structure=json_structure)
             
             response_text = LLMClient(prompt["system"], prompt["user"])
+            print(f"[DEBUG Styler] prompt: {prompt}")
             response_data = json.loads(response_text)
-            
+            print(f"[DEBUG Styler] LLM response text: {response_text}")
+            print(f"[DEBUG Styler] LLM response data: {response_data}")
+
             styled_text = response_data.get("formatted_text", "")
-            confidence = response_data.get("confidence", 0.85)
+            confidence = response_data.get("confidence", 0.00)
             reasoning = response_data.get("reasoning", "")
             
             latency = (time.time() - start_time) * 1000
@@ -241,10 +247,14 @@ class Proofreader(BaseAgent):
             prompt = pm.get("proofreader", text=state.styled_text)
             
             response_text = LLMClient(prompt["system"], prompt["user"])
+            print(f"[DEBUG Proofreader] prompt: {prompt}")
             response_data = json.loads(response_text)
-            
+            print(f"[DEBUG Proofreader] LLM response text: {response_text}")
+            print(f"[DEBUG Proofreader] LLM response data: {response_data}")
+
+
             final_text = response_data.get("corrected_text", "")
-            confidence = response_data.get("confidence", 0.90)
+            confidence = response_data.get("confidence", 0.00)
             corrections = response_data.get("corrections_made", [])
             reasoning = response_data.get("reasoning", "")
             

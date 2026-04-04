@@ -1,9 +1,9 @@
-from text_structuring.langgraph_pipeline import process_text
-from text_structuring.llm.reader import reader
+from text_structuring.pipeline.langgraph_pipeline import process_text
+from text_structuring.data.reader import reader
 
 
 if __name__ == "__main__":
-    raw_text = reader('./text_structuring/llm/testdox.docx')
+    raw_text = reader('./text_structuring/data/testdox.docx')
     result = process_text(raw_text)
     
     print("\nPIPELINE EXECUTION COMPLETE")
