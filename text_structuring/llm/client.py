@@ -2,10 +2,7 @@ import os
 from dotenv import load_dotenv
 from openai import OpenAI
 import time
-from text_structuring.llm.prompt import build_segment_prompt
-from text_structuring.llm.prompt import build_structure_prompt
-from text_structuring.llm.prompt import build_style_prompt
-from text_structuring.llm.prompt import build_proofread_prompt
+
 
 load_dotenv()
 
