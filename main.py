@@ -16,6 +16,7 @@ from text_structuring.llm.baseline import Baseline
 from text_structuring.llm.judge import Evaluator
 
 def main():
+    raw_text = reader('./text_structuring/artifacts/data/testdox.docx')
     # ====================== МУЛЬТИАГЕНТНЫЙ ПОДХОД ======================
     multi_state = TextState(raw_text=raw_text)
     
