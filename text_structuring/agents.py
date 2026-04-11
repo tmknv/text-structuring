@@ -105,3 +105,74 @@ class Proofreader(BaseAgent):
         
         state.final_text = response
         return state
+
+
+class MarkdownConverter(BaseAgent):
+    """
+    Агент для конвертации финального текста в хорошо структурированный Markdown.
+    """
+
+    def run(self, state):
+        pm = PromptManager()
+        
+        # Используем final_text после proofreader
+        prompt = pm.get("markdown_converter", text=state.final_text)
+        
+        response = LLMClient(prompt["system"], prompt["user"])
+        
+        state.markdown_text = response.strip()
+        
+        return state
+
+
+class BaselineAgent(BaseAgent):
+    """
+    Baseline версия: всё в одном промпте.
+    Заменяет всю цепочку segmenter → structure_builder → styler → proofreader.
+    """
+
+    def run(self, state):
+        pm = PromptManager()
+        
+        # Получаем промпт baseline
+        prompt = pm.get("baseline", text=state.raw_text)
+        
+        # Один единственный вызов LLM
+        response = LLMClient(prompt["system"], prompt["user"])
+        
+        # Сохраняем результат
+        state.final_text = response
+        state.is_baseline = True  # метка, что использовался baseline
+        
+        print("✓ BaselineAgent выполнен (один промпт)")
+        
+        return state
+
+
+class EvaluatorAgent(BaseAgent):
+    """
+    Агент для сравнения качества Multi-Agent и Baseline подходов
+    относительно оригинального текста.
+    """
+
+    def run(self, state):
+        pm = PromptManager()
+        
+        prompt = pm.get(
+            "evaluator",
+            original_text=state.raw_text,
+            multi_agent_text=getattr(state, 'final_text_multi', ''),
+            baseline_text=getattr(state, 'final_text', '')
+        )
+        
+        response = LLMClient(prompt["system"], prompt["user"])
+        
+        try:
+            evaluation = json.loads(response)
+            state.evaluation = evaluation
+            print("✓ Оценка качества выполнена")
+        except json.JSONDecodeError:
+            state.evaluation = {"error": "Failed to parse evaluation", "raw": response}
+            print("✗ Не удалось распарсить оценку")
+        
+        return state

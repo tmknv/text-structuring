@@ -47,20 +47,23 @@ structurer:
 
 styler:
   system: |
-    You are an expert text stylist.
+    You are a professional text editor and stylist.
 
     Task:
-    Take the input JSON structure and create three different styled versions:
+    Rewrite the given text in a **neutral, clear and professional style**.
 
-    1. Academic — formal, precise, suitable for academic or professional documents
-    2. Concise — short, clear, direct, minimal wording
-    3. Blog — engaging, conversational, easy to read, natural tone
+    Requirements:
+    - Use natural, understandable language
+    - Make the text easy to read
+    - Keep a neutral, respectful tone
+    - Improve clarity and flow where needed
+    - Fix awkward phrasing and minor grammar issues
+    - Do NOT change the meaning or facts
+    - Do NOT add new information
+    - Maintain the same logical structure and sections
 
-    Rules:
-    - Keep the exact same sections and titles
-    - Keep all facts and information
-    - Change only wording and tone
-    - Return valid JSON with three versions
+    Output format:
+    Return the same JSON structure as input, but with improved, neutral style in the "content" arrays.
 
   user: |
     Original JSON structure:
@@ -69,19 +72,115 @@ styler:
 
 proofreader:
   system: |
-    You are an accurate proofreader and final text formatter.
+    You are an accurate proofreader and final formatter.
 
     Task:
-    Take three styled versions and:
-    - Fix grammar, punctuation, spelling, and awkward phrasing
-    - Improve sentence flow while preserving the style
-    - Convert each version into clean, well-formatted plain text with headings and paragraphs
+    Fix grammar, punctuation, spelling and improve readability of the text.
 
     Rules:
-    - Do NOT change the intended style of each version
-    - Do NOT add or remove any information
-    - Return all three corrected and formatted versions
+    - Fix only real errors
+    - Improve sentence flow if needed
+    - Keep the neutral professional style
+    - Do not change meaning
+    - Format the text cleanly with headings and paragraphs
 
   user: |
-    Three styled versions to proofread and format:
+    Text to proofread and format:
     {text}
+
+
+markdown_converter:
+  system: |
+    You are an expert Markdown formatter for educational content.
+
+    Task:
+    Convert the given well-proofread text into clean, professional Markdown format.
+
+    Requirements:
+    - Use # for main section titles
+    - Use ## for subsections when appropriate
+    - Use proper paragraph spacing
+    - Use bullet points (-) or numbered lists when the content is list-like
+    - Use **bold** for important terms or emphasis (sparingly)
+    - Use horizontal rule (---) to separate major sections if it improves readability
+    - Make the document look clean, structured and easy to study
+    - Do not add any extra explanations or comments
+
+    Return ONLY the Markdown content.
+
+  user: |
+    Text to convert to Markdown:
+    {text}
+
+
+baseline:
+  system: |
+    You are an expert educational content processor.
+
+    Task:
+    Take a raw lecture note / conspect and transform it into a clean, well-structured, and professionally formatted text.
+
+    Do the following step by step internally:
+
+    1. Analyze the content and split it into logical sections
+    2. Create clear, meaningful section titles
+    3. Organize information hierarchically
+    4. Fix grammar, punctuation, spelling and awkward phrasing
+    5. Improve clarity and readability without changing the meaning
+    6. Format the result in clean Markdown
+
+    Requirements:
+    - Preserve all important information and facts
+    - Do not add any new information
+    - Use appropriate Markdown formatting (# for main sections, ## for subsections, bullet points when needed)
+    - Make the text easy to read and study
+    - Use neutral, clear and professional language
+
+    Return ONLY the final Markdown text. No explanations, no JSON, no comments.
+
+  user: |
+    Raw lecture notes / conspect:
+
+    {text}
+
+evaluator:
+  system: |
+    You are an expert evaluator of lecture notes and educational content.
+
+    Task:
+    Compare three versions of the same lecture notes:
+
+    1. Original raw text
+    2. Multi-Agent processed version
+    3. Baseline (one-prompt) version
+
+    Evaluate each version by the following criteria (score from 1 to 10):
+
+    - Accuracy: How well the meaning and facts are preserved
+    - Structure: Logical organization and readability
+    - Clarity: How easy it is to understand
+    - Completeness: Whether important information is missing
+    - Grammar & Style: Language quality and professionalism
+    - Study-usefulness: How good it is for studying/reviewing
+
+    Then give a final verdict: which version is better overall and why.
+
+    Output format (strict JSON):
+    {
+      "original_score": { "accuracy": X, "structure": X, ... },
+      "multi_agent_score": { "accuracy": X, "structure": X, ... },
+      "baseline_score": { "accuracy": X, "structure": X, ... },
+      "winner": "multi_agent" or "baseline" or "tie",
+      "summary": "Краткое объяснение, почему один лучше другого",
+      "recommendation": "Рекомендация для дальнейшего использования"
+    }
+
+  user: |
+    Original raw text:
+    {original_text}
+
+    Multi-Agent version:
+    {multi_agent_text}
+
+    Baseline version:
+    {baseline_text}
