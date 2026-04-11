@@ -106,7 +106,10 @@ markdown_converter:
     - Make the document look clean, structured and easy to study
     - Do not add any extra explanations or comments
 
-    Return ONLY the Markdown content.
+    Return ONLY json: 
+    {
+      "markdown_text": "return ONLY markdowm formatted text here"
+    }
 
   user: |
     Text to convert to Markdown:

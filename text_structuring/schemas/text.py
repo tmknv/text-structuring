@@ -28,6 +28,7 @@ class TextState:
         self.styled_text: Optional[str] = None
         # финальный текст после исправлений (заполняется Proofreader)
         self.final_text: Optional[str] = None
+        self.markdown_text: Optional[str] = None
 
     def __repr__(self):
         """
@@ -40,5 +41,6 @@ class TextState:
             f"  structure={'yes' if self.structure else 'no'}\n"
             f"  styled_text={'yes' if self.styled_text else 'no'}\n"
             f"  final_text={'yes' if self.final_text else 'no'}\n"
+            f"  markdown_text={'yes' if self.markdown_text else 'no'}\n"
             f")"
         )
