@@ -88,7 +88,7 @@ class Styler(BaseAgent):
     def run(self, state):
         pm = PromptManager()
         json_structure = json.dumps(state.structure, ensure_ascii=False, indent=2)
-        prompt = pm.get("formatter", json_structure=json_structure)
+        prompt = pm.get("styler", json_structure=json_structure)
         
         response = LLMClient(prompt["system"], prompt["user"])  
         
