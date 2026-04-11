@@ -2,7 +2,6 @@
 from abc import ABC, abstractmethod
 from time import time
 
-from text_structuring.llm.prompt import build_segment_prompt, build_structure_prompt, build_style_prompt, build_proofread_prompt
 from text_structuring.llm.client import LLMClient
 from text_structuring.schemas.contracts import AgentResponse, create_failed_response, create_success_response
 from text_structuring.schemas.text import TextState 

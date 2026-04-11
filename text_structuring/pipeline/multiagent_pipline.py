@@ -2,7 +2,7 @@
 
 from langgraph.graph import StateGraph, START, END
 from typing import TypedDict, Optional
-from text_structuring.t.agents import Segmenter, StructureBuilder, Styler, Proofreader, MarkdownConverter
+from text_structuring.agents import Segmenter, StructureBuilder, Styler, Proofreader, MarkdownConverter
 from text_structuring.schemas.contracts import AgentResponse
 from text_structuring.schemas.text import TextState
 
@@ -15,6 +15,8 @@ class PipelineState(TypedDict, total=False):
     structure_builder_response: Optional[AgentResponse]
     styler_response: Optional[AgentResponse]
     proofreader_response: Optional[AgentResponse]
+    markdown_converter_response: Optional[AgentResponse]
+
 
 
 # ====================== УЗЛЫ ======================
