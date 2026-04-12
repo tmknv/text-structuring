@@ -52,6 +52,7 @@ segmenter:
 
     <input>
     {text}
+    </input>
 
 
 structurer:

@@ -5,7 +5,11 @@ from typing import TypedDict, Optional
 from text_structuring.agents import Segmenter, StructureBuilder, Styler, Proofreader, MarkdownConverter
 from text_structuring.schemas.contracts import AgentResponse
 from text_structuring.schemas.text import TextState
+from text_structuring.llm.reader import reader
+from text_structuring.t.logger import get_logger, setup_logging
 
+setup_logging()
+logger = get_logger(__name__)
 
 class PipelineState(TypedDict, total=False):
     """Состояние pipeline"""
@@ -26,6 +30,7 @@ def segmenter_node(state: PipelineState) -> PipelineState:
     agent = Segmenter()
     response = agent.run(state["text_state"])
     state["segmenter_response"] = response
+    state["text_state"].segments = response.data.get("segments", [])
     return state
 
 
@@ -34,6 +39,7 @@ def structure_builder_node(state: PipelineState) -> PipelineState:
     agent = StructureBuilder()
     response = agent.run(state["text_state"])
     state["structure_builder_response"] = response
+    state["text_state"].structure = response.data.get("structure", [])
     return state
 
 
@@ -42,6 +48,7 @@ def styler_node(state: PipelineState) -> PipelineState:
     agent = Styler()
     response = agent.run(state["text_state"])
     state["styler_response"] = response
+    state["text_state"].styled_text = response.data.get("styled_text", [])
     return state
 
 
@@ -50,6 +57,7 @@ def proofreader_node(state: PipelineState) -> PipelineState:
     agent = Proofreader()
     response = agent.run(state["text_state"])
     state["proofreader_response"] = response
+    state["text_state"].final_text = response.data.get("final_text", [])
     return state
 
 def markdown_converter_node(state: PipelineState) -> PipelineState:
@@ -57,6 +65,8 @@ def markdown_converter_node(state: PipelineState) -> PipelineState:
     agent = MarkdownConverter()
     response = agent.run(state["text_state"])
     state["markdown_converter_response"] = response
+    state["text_state"].markdown_text = response.data.get("markdown_text", [])
+
     return state
 
 # ====================== ГРАФ ======================
@@ -89,6 +99,7 @@ class PipelineResult:
     def __init__(self, state: PipelineState):
         self.text_state = state["text_state"]
         self.final_text = state["text_state"].final_text
+        self.markdown_text = state["text_state"].markdown_text
         
         # Собираем responses агентов
         self.responses = [
@@ -96,6 +107,7 @@ class PipelineResult:
             state.get("structure_builder_response"),
             state.get("styler_response"),
             state.get("proofreader_response"),
+            state.get("markdown_converter_response")
         ]
     
     @property
@@ -129,12 +141,14 @@ def run_pipeline(raw_text: str) -> PipelineResult:
         PipelineResult: Результат с финальным текстом и reasoning от всех агентов
     """
     text_state = TextState(raw_text=raw_text)
+    logger.info("Строим граф для обработки текста")
     graph = build_graph()
     
     initial_state: PipelineState = {
         "text_state": text_state
     }
     
+    logger.info("Запускаем граф")
     final_state = graph.invoke(initial_state)
     return PipelineResult(final_state)
 
@@ -152,3 +166,14 @@ def process_text(text: str) -> PipelineResult:
         PipelineResult: Результат с финальным текстом и reasoning
     """
     return run_pipeline(text)
+
+if __name__ == "__main__":
+
+    """Пример использования"""
+
+    raw_text = reader('./text_structuring/artifacts/data/testdox.docx')
+    result = process_text(raw_text)
+    print("Финальный текст:")
+    print(result.markdown_text)
+    print("\nReasoning от агентов:")
+    print(result.all_reasoning)

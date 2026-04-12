@@ -1,9 +1,10 @@
 
 from abc import ABC, abstractmethod
-from time import time
+import time
 
 from text_structuring.llm.client import LLMClient
 from text_structuring.schemas.contracts import AgentResponse, create_failed_response, create_success_response
+from text_structuring.t.logger import get_logger, setup_logging
 from text_structuring.schemas.text import TextState 
 import json
 import yaml
@@ -11,6 +12,9 @@ import os
 from pathlib import Path
 from typing import Dict
 from dotenv import load_dotenv
+
+setup_logging()
+logger = get_logger(__name__)
 # ====================== Prompt Manager ======================
 
 class PromptManager:
@@ -79,14 +83,16 @@ class Segmenter(BaseAgent):
 
     def run(self, state) -> AgentResponse:
         try:
+            logger.info("Запускаем Segmenter")
             start_time = time.time()
             pm = PromptManager()
             prompt = pm.get("segmenter", text=state.raw_text)
-            print(f"[DEBUG Segmenter] prompt: {prompt}")
+            logger.debug(f"[DEBUG Segmenter] prompt: {prompt}")
             response_text = LLMClient(prompt["system"], prompt["user"])
+            logger.info("Segmenter получил ответ от LLM")
             response_data = json.loads(response_text)
-            print(f"[DEBUG Segmenter] LLM response text: {response_text}")
-            print(f"[DEBUG Segmenter] LLM response data: {response_data}")
+            logger.debug(f"[DEBUG Segmenter] LLM response text: {response_text}")
+            logger.debug(f"[DEBUG Segmenter] LLM response data: {response_data}")
             segments = response_data.get("segments", [])
             confidence = response_data.get("confidence", 0.00)
             reasoning = response_data.get("reasoning", "")
@@ -94,6 +100,7 @@ class Segmenter(BaseAgent):
             latency = (time.time() - start_time) * 1000
             state.segments = segments
             
+            logger.info(f"Segmenter выделил {len(segments)} сегментов текста за {latency:.2f} ms")
             return create_success_response(
                 agent_name="Segmenter",
                 data={"segments": segments, "count": len(segments)},
@@ -110,6 +117,7 @@ class Segmenter(BaseAgent):
                 latency_ms=latency
             )
         except json.JSONDecodeError as e:
+            logger.error(f"Segmenter JSON парсинг ошибка: {str(e)}")
             return create_failed_response(
                 agent_name="Segmenter",
                 error=f"JSON парсинг ошибка: {str(e)}",
@@ -117,6 +125,7 @@ class Segmenter(BaseAgent):
                 latency_ms=(time.time() - start_time) * 1000 if 'start_time' in locals() else None
             )
         except Exception as e:
+            logger.error(f"Segmenter ошибка: {str(e)}")
             return create_failed_response(
                 agent_name="Segmenter",
                 error=str(e),
@@ -130,6 +139,7 @@ class StructureBuilder(BaseAgent):
 
     def run(self, state) -> AgentResponse:
         try:
+            logger.info("Запускаем StructureBuilder")
             start_time = time.time()
             pm = PromptManager()
             joined = "\n".join(state.segments)
@@ -137,10 +147,11 @@ class StructureBuilder(BaseAgent):
             
             response_text = LLMClient(prompt["system"], prompt["user"])
 
-            print(f"[DEBUG StructureBuilder] prompt: {prompt}")
+            logger.debug(f"[DEBUG StructureBuilder] prompt: {prompt}")
             response_data = json.loads(response_text)
-            print(f"[DEBUG StructureBuilder] LLM response text: {response_text}")
-            print(f"[DEBUG StructureBuilder] LLM response data: {response_data}")
+            logger.info(f"StructureBuilder получил ответ от LLM")
+            logger.debug(f"[DEBUG StructureBuilder] LLM response text: {response_text}")
+            logger.debug(f"[DEBUG StructureBuilder] LLM response data: {response_data}")
             structure = response_data.get("sections", [])
             confidence = response_data.get("confidence", 0.00)
             reasoning = response_data.get("reasoning", "")
@@ -152,6 +163,7 @@ class StructureBuilder(BaseAgent):
             # Анализ качества структуры
             depth = _calculate_json_depth(state.structure)
             
+            logger.info(f"StructureBuilder построил структуру с глубиной {depth} за {latency:.2f} ms")
             return create_success_response(
                 agent_name="StructureBuilder",
                 data={"structure": state.structure},
@@ -169,6 +181,7 @@ class StructureBuilder(BaseAgent):
                 latency_ms=latency
             )
         except json.JSONDecodeError as e:
+            logger.error(f"StructureBuilder JSON парсинг ошибка: {str(e)}")
             return create_failed_response(
                 agent_name="StructureBuilder",
                 error=f"JSON парсинг ошибка: {str(e)}",
@@ -176,6 +189,7 @@ class StructureBuilder(BaseAgent):
                 latency_ms=(time.time() - start_time) * 1000 if 'start_time' in locals() else None
             )
         except Exception as e:
+            logger.error(f"StructureBuilder ошибка: {str(e)}")
             return create_failed_response(
                 agent_name="StructureBuilder",
                 error=str(e),
@@ -189,16 +203,18 @@ class Styler(BaseAgent):
     
     def run(self, state) -> AgentResponse:
         try:
+            logger.info("Запускаем Styler")
             start_time = time.time()
             pm = PromptManager()
             json_structure = json.dumps(state.structure, ensure_ascii=False, indent=2)
-            prompt = pm.get("formatter", json_structure=json_structure)
+            prompt = pm.get("styler", json_structure=json_structure)
             
             response_text = LLMClient(prompt["system"], prompt["user"])
-            print(f"[DEBUG Styler] prompt: {prompt}")
+            logger.info("Styler получил ответ от LLM")
+            logger.debug(f"[DEBUG Styler] prompt: {prompt}")
             response_data = json.loads(response_text)
-            print(f"[DEBUG Styler] LLM response text: {response_text}")
-            print(f"[DEBUG Styler] LLM response data: {response_data}")
+            logger.debug(f"[DEBUG Styler] LLM response text: {response_text}")
+            logger.debug(f"[DEBUG Styler] LLM response data: {response_data}")
 
             styled_text = response_data.get("formatted_text", "")
             confidence = response_data.get("confidence", 0.00)
@@ -208,6 +224,7 @@ class Styler(BaseAgent):
             
             state.styled_text = styled_text
             
+            logger.info(f"Styler отформатировал текст до {len(styled_text)} символов за {latency:.2f} ms")
             return create_success_response(
                 agent_name="Styler",
                 data={"styled_text": styled_text, "length": len(styled_text)},
@@ -225,6 +242,7 @@ class Styler(BaseAgent):
                 latency_ms=latency
             )
         except json.JSONDecodeError as e:
+            logger.error(f"Styler JSON парсинг ошибка: {str(e)}")
             return create_failed_response(
                 agent_name="Styler",
                 error=f"JSON парсинг ошибка: {str(e)}",
@@ -232,6 +250,7 @@ class Styler(BaseAgent):
                 latency_ms=(time.time() - start_time) * 1000 if 'start_time' in locals() else None
             )
         except Exception as e:
+            logger.error(f"Styler ошибка: {str(e)}")
             return create_failed_response(
                 agent_name="Styler",
                 error=str(e),
@@ -246,15 +265,17 @@ class Proofreader(BaseAgent):
     
     def run(self, state) -> AgentResponse:
         try:
+            logger.info("Запускаем Proofreader")
             start_time = time.time()
             pm = PromptManager()
             prompt = pm.get("proofreader", text=state.styled_text)
             
             response_text = LLMClient(prompt["system"], prompt["user"])
-            print(f"[DEBUG Proofreader] prompt: {prompt}")
+            logger.info("Proofreader получил ответ от LLM")
+            logger.debug(f"[DEBUG Proofreader] prompt: {prompt}")
             response_data = json.loads(response_text)
-            print(f"[DEBUG Proofreader] LLM response text: {response_text}")
-            print(f"[DEBUG Proofreader] LLM response data: {response_data}")
+            logger.debug(f"[DEBUG Proofreader] LLM response text: {response_text}")
+            logger.debug(f"[DEBUG Proofreader] LLM response data: {response_data}")
 
 
             final_text = response_data.get("corrected_text", "")
@@ -266,6 +287,7 @@ class Proofreader(BaseAgent):
             
             state.final_text = final_text
             
+            logger.info(f"Proofreader проверил и финализировал текст до {len(final_text)} символов за {latency:.2f} ms с {len(corrections) if isinstance(corrections, list) else 0} исправлениями")
             return create_success_response(
                 agent_name="Proofreader",
                 data={"final_text": final_text, "length": len(final_text)},
@@ -284,6 +306,7 @@ class Proofreader(BaseAgent):
                 latency_ms=latency
             )
         except json.JSONDecodeError as e:
+            logger.error(f"Proofreader JSON парсинг ошибка: {str(e)}")
             return create_failed_response(
                 agent_name="Proofreader",
                 error=f"JSON парсинг ошибка: {str(e)}",
@@ -291,6 +314,7 @@ class Proofreader(BaseAgent):
                 latency_ms=(time.time() - start_time) * 1000 if 'start_time' in locals() else None
             )
         except Exception as e:
+            logger.error(f"Proofreader ошибка: {str(e)}")
             return create_failed_response(
                 agent_name="Proofreader",
                 error=str(e),
@@ -306,23 +330,26 @@ class MarkdownConverter(BaseAgent):
     """
     def run(self, state) -> AgentResponse:
         try:
+            logger.info("Запускаем MarkdownConverter")
             start_time = time.time()
             pm = PromptManager()
             prompt = pm.get("markdown_converter", text=state.final_text)
             
             response_text = LLMClient(prompt["system"], prompt["user"])
-            print(f"[DEBUG MarkdownConverter] prompt: {prompt}")
+            logger.info("MarkdownConverter получил ответ от LLM")
+            logger.debug(f"[DEBUG MarkdownConverter] prompt: {prompt}")
             response_data = json.loads(response_text)
-            print(f"[DEBUG MarkdownConverter] LLM response text: {response_text}")
-            print(f"[DEBUG MarkdownConverter] LLM response data: {response_data}")
+            logger.debug(f"[DEBUG MarkdownConverter] LLM response text: {response_text}")
+            logger.debug(f"[DEBUG MarkdownConverter] LLM response data: {response_data}")
 
 
             final_text = response_data.get("markdown_text", "")
             
             latency = (time.time() - start_time) * 1000
             
-            state.final_text = final_text
+            state.markdown_text = final_text
             
+            logger.info(f"MarkdownConverter конвертировал текст в Markdown до {len(final_text)} символов за {latency:.2f} ms")
             return create_success_response(
                 agent_name="MarkdownConverter",
                 data={"markdown_text": final_text, "length": len(final_text)},
@@ -337,6 +364,7 @@ class MarkdownConverter(BaseAgent):
                 latency_ms=latency
             )
         except json.JSONDecodeError as e:
+            logger.error(f"MarkdownConverter JSON парсинг ошибка: {str(e)}")
             return create_failed_response(
                 agent_name="MarkdownConverter",
                 error=f"JSON парсинг ошибка: {str(e)}",
@@ -344,24 +372,13 @@ class MarkdownConverter(BaseAgent):
                 latency_ms=(time.time() - start_time) * 1000 if 'start_time' in locals() else None
             )
         except Exception as e:
+            logger.error(f"MarkdownConverter ошибка: {str(e)}")
             return create_failed_response(
                 agent_name="MarkdownConverter",
                 error=str(e),
                 reason="Ошибка при конвертации в Markdown",
                 latency_ms=(time.time() - start_time) * 1000 if 'start_time' in locals() else None
             )
-
-    def run(self, state):
-        pm = PromptManager()
-        
-        # Используем final_text после proofreader
-        prompt = pm.get("markdown_converter", text=state.final_text)
-        
-        response = LLMClient(prompt["system"], prompt["user"])
-        
-        state.markdown_text = response.strip()
-        
-        return state
 
 
 def _calculate_json_depth(obj, current_depth=0) -> int:
