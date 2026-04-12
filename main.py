@@ -43,7 +43,7 @@ def main():
     evaluator = Evaluator()
     evaluation = evaluator.run_comparison(
         original_text=raw_text,
-        multi_agent_text=multi_state.final_text,
+        multi_agent_text=multi_state.markdown_text,
         baseline_text=baseline_state.final_text
     )
     logger.info("Оценка завершена")
@@ -62,6 +62,11 @@ def main():
 
         print("\nПодробные оценки:")
         print(json.dumps(evaluation, ensure_ascii=False, indent=2))
+
+        print("\nМультиагентный результат:")
+        print(multi_state.final_text)
+        print("\nBaseline результат:")
+        print(baseline_state.final_text)
 
     print("\nТестирование завершено.")
 
